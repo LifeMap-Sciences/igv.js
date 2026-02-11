@@ -128,6 +128,22 @@ class RulerViewport extends TrackViewport {
     }
 
     mouseMove(event) {
+        const isWholeGenome = (
+            this.browser.isMultiLocusWholeGenomeView() ||
+            GenomeUtils.isWholeGenomeView(this.referenceFrame.chr)
+        );
+
+        if (isWholeGenome) {
+            if (this.browser.doShowCursorGuide) {
+                this.tooltip.style.display = "none";
+            }
+            return undefined;
+        }
+
+        const { x } = DOMUtils.translateMouseCoordinates(event, this.viewportElement);
+        const { start, end, bpPerPixel } = this.referenceFrame;
+        const bp = Math.round(0.5 + start + Math.max(0, x) * bpPerPixel);
+
         if (this.browser.doShowCursorGuide) {
             if (currentViewport === undefined) {
                 currentViewport = this;
@@ -142,20 +158,6 @@ class RulerViewport extends TrackViewport {
                 this.tooltip.style.display = "block";
             }
 
-            const isWholeGenome = (
-                this.browser.isMultiLocusWholeGenomeView() ||
-                GenomeUtils.isWholeGenomeView(this.referenceFrame.chr)
-            );
-
-            if (isWholeGenome) {
-                this.tooltip.style.display = "none";
-                return undefined;
-            }
-
-            const { x } = DOMUtils.translateMouseCoordinates(event, this.viewportElement);
-            const { start, end, bpPerPixel } = this.referenceFrame;
-            const bp = Math.round(0.5 + start + Math.max(0, x) * bpPerPixel);
-
             this.tooltipContent.textContent = StringUtils.numberFormatter(bp);
 
             const tooltipRect = this.tooltipContent.getBoundingClientRect();
@@ -169,9 +171,9 @@ class RulerViewport extends TrackViewport {
             timer = setTimeout(() => {
                 if (this.tooltip) this.tooltip.style.display = "none";
             }, toolTipTimeout);
-
-            return { start, bp, end };
         }
+
+        return { start, bp, end };
     }
 
     startSpinner() {
