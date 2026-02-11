@@ -1,5 +1,6 @@
 
 import * as DOMUtils from "../ui/utils/dom-utils.js"
+import {lerp} from "../util/igvUtils.js"
 
 class CursorGuide {
 
@@ -10,30 +11,46 @@ class CursorGuide {
         this._visible = false
         this._wasVisibleBeforeWGV = false
 
+        this.overlay = DOMUtils.div({
+            class: 'igv-cursor-guide-overlay',
+            style: {
+                position: 'absolute',
+                top: '0',
+                left: '0',
+                width: '0',
+                height: '0',
+                pointerEvents: 'none',
+                zIndex: '99999'
+            }
+        })
         this.horizontalGuide = DOMUtils.div({class: 'igv-cursor-guide-horizontal'})
-        columnContainer.appendChild(this.horizontalGuide)
+        this.overlay.appendChild(this.horizontalGuide)
 
         this.verticalGuide = DOMUtils.div({class: 'igv-cursor-guide-vertical'})
-        columnContainer.appendChild(this.verticalGuide)
+        this.overlay.appendChild(this.verticalGuide)
+
+        browser.root.appendChild(this.overlay)
 
         this.addMouseHandler(browser)
 
         this.setVisibility(browser.config.showCursorGuide)
 
-        browser.on('columnlayoutchange', () => this.moveGuidesToEnd())
+        this._boundUpdateOverlay = () => this._updateOverlayPosition()
+        browser.on('columnlayoutchange', this._boundUpdateOverlay)
+        this._updateOverlayPosition()
     }
 
     get visible() {
         return this._visible
     }
 
-    moveGuidesToEnd() {
-        if (this.horizontalGuide?.parentNode === this.columnContainer) {
-            this.columnContainer.appendChild(this.horizontalGuide)
-        }
-        if (this.verticalGuide?.parentNode === this.columnContainer) {
-            this.columnContainer.appendChild(this.verticalGuide)
-        }
+    _updateOverlayPosition() {
+        const rootRect = this.browser.root.getBoundingClientRect()
+        const colRect = this.columnContainer.getBoundingClientRect()
+        this.overlay.style.top = `${colRect.top - rootRect.top}px`
+        this.overlay.style.left = `${colRect.left - rootRect.left}px`
+        this.overlay.style.width = `${colRect.width}px`
+        this.overlay.style.height = `${colRect.height}px`
     }
 
     addMouseHandler(browser) {
@@ -58,6 +75,17 @@ class CursorGuide {
 
     removeMouseHandler() {
         this.columnContainer.removeEventListener('mousemove', this.boundMouseMoveHandler)
+    }
+
+    updateWithInterpolant(interpolant) {
+        const {x: xc} = this.columnContainer.getBoundingClientRect()
+        const rulerTrackView = this.browser.getRulerTrackView()
+        if (!rulerTrackView || !rulerTrackView.viewports || rulerTrackView.viewports.length === 0) return
+        const viewport = rulerTrackView.viewports[0].viewportElement
+        const {x, width} = viewport.getBoundingClientRect()
+        const left = x - xc
+        const pixel = Math.floor(lerp(left, width + left, interpolant))
+        this.verticalGuide.style.left = `${pixel}px`
     }
 
     _computeGenomicCoordinates(event) {
@@ -134,9 +162,8 @@ class CursorGuide {
 
     dispose() {
         this.removeMouseHandler()
-        this.browser.off('columnlayoutchange')
-        this.horizontalGuide.remove()
-        this.verticalGuide.remove()
+        this.browser.off('columnlayoutchange', this._boundUpdateOverlay)
+        this.overlay?.remove()
         this.customMouseHandler = undefined
     }
 
