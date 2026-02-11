@@ -6,7 +6,7 @@ export default [
     {
         input: 'js/index.js',
         output: [
-            {file: 'dist/igv.esm.js', format: 'es'},
+            {file: 'dist/igv.esm.js', format: 'es', sourcemap: true},
             {file: 'dist/igv.esm.min.js', format: 'es', sourcemap: true, plugins: [terser()]}
         ],
         plugins: [
