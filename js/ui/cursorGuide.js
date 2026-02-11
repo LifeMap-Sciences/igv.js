@@ -8,16 +8,34 @@ class CursorGuide {
         this.browser = browser
         this.columnContainer = columnContainer
 
+        this.overlay = DOMUtils.div({
+            class: 'igv-cursor-guide-overlay',
+            style: {
+                position: 'absolute',
+                inset: '0',
+                pointerEvents: 'none',
+                zIndex: '9999'
+            }
+        })
         this.horizontalGuide = DOMUtils.div({class: 'igv-cursor-guide-horizontal'})
-        columnContainer.appendChild(this.horizontalGuide)
+        this.overlay.appendChild(this.horizontalGuide)
 
         this.verticalGuide = DOMUtils.div({class: 'igv-cursor-guide-vertical'})
-        columnContainer.appendChild(this.verticalGuide)
+        this.overlay.appendChild(this.verticalGuide)
+
+        columnContainer.appendChild(this.overlay)
 
         this.addMouseHandler(browser)
 
         this.setVisibility(browser.config.showCursorGuide)
 
+        browser.on('columnlayoutchange', () => this.moveOverlayToEnd())
+    }
+
+    moveOverlayToEnd() {
+        if (this.overlay && this.overlay.parentNode === this.columnContainer) {
+            this.columnContainer.appendChild(this.overlay)
+        }
     }
 
     addMouseHandler(browser) {
@@ -27,18 +45,15 @@ class CursorGuide {
 
         function mouseMoveHandler(event) {
 
-            const tag = event.target.tagName
-
             const {x, y} = DOMUtils.translateMouseCoordinates(event, this.columnContainer)
             this.horizontalGuide.style.top = `${y}px`
+            this.verticalGuide.style.left = `${x}px`
 
             if ('CANVAS' === event.target.tagName) {
 
                 const viewport = findAncestorOfClass(event.target, 'igv-viewport')
 
                 if (viewport && browser.getRulerTrackView()) {
-
-                    this.verticalGuide.style.left = `${x}px`
 
                     const columns = browser.root.querySelectorAll('.igv-column')
                     let index = undefined
