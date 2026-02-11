@@ -8,33 +8,25 @@ class CursorGuide {
         this.browser = browser
         this.columnContainer = columnContainer
 
-        this.overlay = DOMUtils.div({
-            class: 'igv-cursor-guide-overlay',
-            style: {
-                position: 'absolute',
-                inset: '0',
-                pointerEvents: 'none',
-                zIndex: '9999'
-            }
-        })
         this.horizontalGuide = DOMUtils.div({class: 'igv-cursor-guide-horizontal'})
-        this.overlay.appendChild(this.horizontalGuide)
+        columnContainer.appendChild(this.horizontalGuide)
 
         this.verticalGuide = DOMUtils.div({class: 'igv-cursor-guide-vertical'})
-        this.overlay.appendChild(this.verticalGuide)
-
-        columnContainer.appendChild(this.overlay)
+        columnContainer.appendChild(this.verticalGuide)
 
         this.addMouseHandler(browser)
 
         this.setVisibility(browser.config.showCursorGuide)
 
-        browser.on('columnlayoutchange', () => this.moveOverlayToEnd())
+        browser.on('columnlayoutchange', () => this.moveGuidesToEnd())
     }
 
-    moveOverlayToEnd() {
-        if (this.overlay && this.overlay.parentNode === this.columnContainer) {
-            this.columnContainer.appendChild(this.overlay)
+    moveGuidesToEnd() {
+        if (this.horizontalGuide?.parentNode === this.columnContainer) {
+            this.columnContainer.appendChild(this.horizontalGuide)
+        }
+        if (this.verticalGuide?.parentNode === this.columnContainer) {
+            this.columnContainer.appendChild(this.verticalGuide)
         }
     }
 
