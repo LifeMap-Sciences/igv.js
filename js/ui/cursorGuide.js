@@ -48,6 +48,9 @@ class CursorGuide {
             const {x, y} = DOMUtils.translateMouseCoordinates(event, this.columnContainer)
             this.horizontalGuide.style.top = `${y}px`
             this.verticalGuide.style.left = `${x}px`
+            if (0 === (this._moveCount = (this._moveCount || 0) + 1) % 20) {
+                console.log('[CursorGuide] mousemove: x=%d y=%d → horizontalGuide.top=%dpx verticalGuide.left=%dpx', x, y, y, x)
+            }
 
             if ('CANVAS' === event.target.tagName) {
 
@@ -101,6 +104,7 @@ class CursorGuide {
         const left = x - xc
         const pixel = Math.floor(lerp(left, width + left, interpolant))
         this.verticalGuide.style.left = `${pixel}px`
+        console.log('[CursorGuide] updateWithInterpolant: interpolant=%f → verticalGuide.left=%dpx', interpolant, pixel)
     }
 
     setVisibility(showCursorGuide) {
