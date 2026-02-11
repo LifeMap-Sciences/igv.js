@@ -624,6 +624,7 @@ export type GlobalConfig = {
     doShowROITableButton: boolean;
     showROITable: boolean;
     showCursorTrackingGuideButton: boolean;
+    showCursorGuide: boolean;
     showCursorTrackingGuide: boolean;
     showCenterGuideButton: boolean;
     showCenterGuide: boolean;

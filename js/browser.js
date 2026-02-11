@@ -168,6 +168,10 @@ class Browser {
         return this.roiManager.roiTableIsVisible()
     }
 
+    get doShowCursorGuide() {
+        return this.cursorGuide ? this.cursorGuide.visible : false
+    }
+
     initialize(config) {
 
         this.flanking = config.flanking
@@ -182,8 +186,6 @@ class Browser {
         this.doShowTrackLabels = config.showTrackLabels
 
         this.doShowCenterLine = config.showCenterGuide
-
-        this.doShowCursorGuide = config.showCursorGuide
 
         this.showSampleNames = config.showSampleNames
 
@@ -212,6 +214,8 @@ class Browser {
 
         this.setTrackLabelVisibility(config.showTrackLabels)
 
+        this.cursorGuide = new CursorGuide(this.columnContainer, this)
+
         this.navbar = new ResponsiveNavbar(config, this)
 
         this.columnContainer.parentNode.insertBefore(this.navbar.navigation, this.columnContainer)
@@ -219,7 +223,6 @@ class Browser {
         if (false === config.showControls) {
             this.navbar.hide()
         }
-        this.cursorGuide = new CursorGuide(this.columnContainer, this)
 
         this.inputDialog = new InputDialog(this.root)
         this.inputDialog.container.id = `igv-input-dialog-${DOMUtils.guid()}`
@@ -817,8 +820,13 @@ class Browser {
             this.navbar.centerLineButton.boundMouseClickHandler()
         }
 
-        if (this.doShowCursorGuide && GenomeUtils.isWholeGenomeView(referenceFrameList[0].chr)) {
-            this.navbar.cursorGuideButton.boundMouseClickHandler()
+        if (GenomeUtils.isWholeGenomeView(referenceFrameList[0].chr)) {
+            this.cursorGuide.enterWholeGenomeView()
+            this.navbar.cursorGuideButton.setVisibility(false)
+        } else {
+            this.cursorGuide.leaveWholeGenomeView()
+            this.navbar.cursorGuideButton.setVisibility(this.config.showCursorTrackingGuideButton)
+            this.navbar.cursorGuideButton.setState(this.cursorGuide.visible)
         }
 
         this.setCenterLineAndCenterLineButtonVisibility(GenomeUtils.isWholeGenomeView(referenceFrameList[0].chr))
@@ -852,13 +860,8 @@ class Browser {
     }
 
     // cursor guide
-    setCursorGuideVisibility(doShowCursorGuide) {
-
-        if (doShowCursorGuide) {
-            this.cursorGuide.show()
-        } else {
-            this.cursorGuide.hide()
-        }
+    setCursorGuideVisibility(visible) {
+        this.cursorGuide.setVisibility(visible)
     }
 
     setCustomCursorGuideMouseHandler(mouseHandler) {
@@ -1869,6 +1872,9 @@ class Browser {
 
     dispose() {
         this.removeEventHandlers()
+        if (this.cursorGuide) {
+            this.cursorGuide.dispose()
+        }
         for (let trackView of this.trackViews) {
             trackView.dispose()
         }

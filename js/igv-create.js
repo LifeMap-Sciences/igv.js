@@ -22,6 +22,7 @@ async function createBrowser(parentDiv, config) {
         await GenomeUtils.initializeGenomes(config)
     }
 
+    resolveConfigSynonyms(config)
     setDefaults(config)
 
     if (config.queryParametersSupported) {
@@ -209,7 +210,7 @@ const defaultOptions = {
     showTrackLabelButton: true,
     showTrackLabels: true,
     showCursorTrackingGuideButton: true,
-    showCursorGuide: false,   // showCursorTrackingGuide is a synonym
+    showCursorGuide: false,
     showCenterGuideButton: true,
     showCenterGuide: false,
     showSampleNames: false,
@@ -222,5 +223,11 @@ const defaultOptions = {
     tracks: []
 }
 
+
+function resolveConfigSynonyms(config) {
+    if (config.showCursorTrackingGuide !== undefined && config.showCursorGuide === undefined) {
+        config.showCursorGuide = config.showCursorTrackingGuide
+    }
+}
 
 export {createTrack, createBrowser, removeBrowser, removeAllBrowsers, getAllBrowsers, visibilityChange, setDefaults}

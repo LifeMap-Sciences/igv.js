@@ -1,12 +1,14 @@
 
 import * as DOMUtils from "../ui/utils/dom-utils.js"
-import {lerp} from "../util/igvUtils.js"
 
 class CursorGuide {
 
     constructor(columnContainer, browser) {
         this.browser = browser
         this.columnContainer = columnContainer
+
+        this._visible = false
+        this._wasVisibleBeforeWGV = false
 
         this.horizontalGuide = DOMUtils.div({class: 'igv-cursor-guide-horizontal'})
         columnContainer.appendChild(this.horizontalGuide)
@@ -19,6 +21,10 @@ class CursorGuide {
         this.setVisibility(browser.config.showCursorGuide)
 
         browser.on('columnlayoutchange', () => this.moveGuidesToEnd())
+    }
+
+    get visible() {
+        return this._visible
     }
 
     moveGuidesToEnd() {
@@ -37,48 +43,15 @@ class CursorGuide {
 
         function mouseMoveHandler(event) {
 
+            if (!this._visible) return
+
             const {x, y} = DOMUtils.translateMouseCoordinates(event, this.columnContainer)
             this.horizontalGuide.style.top = `${y}px`
             this.verticalGuide.style.left = `${x}px`
-            if (0 === (this._moveCount = (this._moveCount || 0) + 1) % 20) {
-                console.log('[CursorGuide] mousemove: x=%d y=%d → horizontalGuide.top=%dpx verticalGuide.left=%dpx', x, y, y, x)
+
+            if (this.customMouseHandler && 'CANVAS' === event.target.tagName) {
+                this._computeGenomicCoordinates(event)
             }
-
-            if ('CANVAS' === event.target.tagName) {
-
-                const viewport = findAncestorOfClass(event.target, 'igv-viewport')
-
-                if (viewport && browser.getRulerTrackView()) {
-
-                    const columns = browser.root.querySelectorAll('.igv-column')
-                    let index = undefined
-                    const viewportParent = viewport.parentElement
-                    for (let i = 0; i < columns.length; i++) {
-                        if (undefined === index && viewportParent === columns[i]) {
-                            index = i
-                        }
-                    }
-
-                    if (!(undefined === index)) {
-
-                        const rulerViewport = browser.getRulerTrackView().viewports[index]
-                        const result = rulerViewport.mouseMove(event)
-
-                        if (result) {
-
-                            const {start, bp, end} = result
-                            const interpolant = (bp - start) / (end - start)
-
-                            if (this.customMouseHandler) {
-                                this.customMouseHandler({start, bp, end, interpolant})
-                            }
-                        } // if (result)
-
-                    } // if (index)
-
-                } // if (viewport && browser.getRulerTrackView())
-
-            } // if ('CANVAS' === event.target.tagName) {
 
         }
     }
@@ -87,34 +60,59 @@ class CursorGuide {
         this.columnContainer.removeEventListener('mousemove', this.boundMouseMoveHandler)
     }
 
-    updateWithInterpolant(interpolant) {
-        const {x: xc} = this.columnContainer.getBoundingClientRect()
-        const rulerTrackView = this.browser.getRulerTrackView()
-        if (!rulerTrackView || !rulerTrackView.viewports || rulerTrackView.viewports.length === 0) return
-        const viewport = rulerTrackView.viewports[0].viewportElement
-        const {x, width} = viewport.getBoundingClientRect()
-        const left = x - xc
-        const pixel = Math.floor(lerp(left, width + left, interpolant))
-        this.verticalGuide.style.left = `${pixel}px`
-        console.log('[CursorGuide] updateWithInterpolant: interpolant=%f → verticalGuide.left=%dpx', interpolant, pixel)
+    _computeGenomicCoordinates(event) {
+
+        const viewport = findAncestorOfClass(event.target, 'igv-viewport')
+
+        if (viewport && this.browser.getRulerTrackView()) {
+
+            const columns = this.browser.root.querySelectorAll('.igv-column')
+            let index = undefined
+            const viewportParent = viewport.parentElement
+            for (let i = 0; i < columns.length; i++) {
+                if (undefined === index && viewportParent === columns[i]) {
+                    index = i
+                }
+            }
+
+            if (undefined !== index) {
+
+                const rulerViewport = this.browser.getRulerTrackView().viewports[index]
+                const result = rulerViewport.mouseMove(event)
+
+                if (result) {
+
+                    const {start, bp, end} = result
+                    const interpolant = (bp - start) / (end - start)
+
+                    if (this.customMouseHandler) {
+                        this.customMouseHandler({start, bp, end, interpolant})
+                    }
+                }
+
+            }
+
+        }
+
     }
 
-    setVisibility(showCursorGuide) {
-        if (true === showCursorGuide) {
+    setVisibility(visible) {
+        if (true === visible) {
             this.show()
         } else {
             this.hide()
         }
+        this._wasVisibleBeforeWGV = this._visible
     }
 
     show() {
+        this._visible = true
         this.verticalGuide.style.display = 'block'
         this.horizontalGuide.style.display = 'block'
-
     }
 
     hide() {
-
+        this._visible = false
         this.verticalGuide.style.display = 'none'
         this.horizontalGuide.style.display = 'none'
 
@@ -123,7 +121,23 @@ class CursorGuide {
                 viewport.tooltip.style.display = 'none'
             }
         }
+    }
 
+    enterWholeGenomeView() {
+        this._wasVisibleBeforeWGV = this._visible
+        if (this._visible) this.hide()
+    }
+
+    leaveWholeGenomeView() {
+        if (this._wasVisibleBeforeWGV) this.show()
+    }
+
+    dispose() {
+        this.removeMouseHandler()
+        this.browser.off('columnlayoutchange')
+        this.horizontalGuide.remove()
+        this.verticalGuide.remove()
+        this.customMouseHandler = undefined
     }
 
 }
