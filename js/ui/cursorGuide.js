@@ -1,5 +1,6 @@
 
 import * as DOMUtils from "../ui/utils/dom-utils.js"
+import {lerp} from "../util/igvUtils.js"
 
 class CursorGuide {
 
@@ -74,6 +75,17 @@ class CursorGuide {
 
     removeMouseHandler() {
         this.columnContainer.removeEventListener('mousemove', this.boundMouseMoveHandler)
+    }
+
+    updateWithInterpolant(interpolant) {
+        const {x: xc} = this.columnContainer.getBoundingClientRect()
+        const rulerTrackView = this.browser.getRulerTrackView()
+        if (!rulerTrackView || !rulerTrackView.viewports || rulerTrackView.viewports.length === 0) return
+        const viewport = rulerTrackView.viewports[0].viewportElement
+        const {x, width} = viewport.getBoundingClientRect()
+        const left = x - xc
+        const pixel = Math.floor(lerp(left, width + left, interpolant))
+        this.verticalGuide.style.left = `${pixel}px`
     }
 
     setVisibility(showCursorGuide) {

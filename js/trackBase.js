@@ -705,6 +705,10 @@ class TrackBase {
     getFilterableAttributes() {
         return {}
     }
+
+    static getDefaultColor() {
+        return 'rgb(150,150,150)'
+    }
 }
 
 /**

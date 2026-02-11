@@ -67,6 +67,7 @@ async function createBrowser(parentDiv, config) {
         createWebSocketClient(host, port, browser)
     }
 
+    browser.knownGenomes = GenomeUtils.KNOWN_GENOMES
     return browser
 }
 

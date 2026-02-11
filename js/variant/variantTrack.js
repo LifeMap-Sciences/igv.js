@@ -1010,6 +1010,10 @@ function expandGenotype(call, variant) {
         }
         return gt
     }
+
+    static getDefaultColor() {
+        return 'rgb(0,0,150)'
+    }
 }
 
 

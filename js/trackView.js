@@ -149,6 +149,24 @@ class TrackView {
 
         }
 
+        if (true === browser.config.showEmbeddingCheckbox && false === multiTrackSelectExclusionTypes.has(this.track.type)) {
+
+            const container = DOMUtils.div()
+            axis.appendChild(container)
+
+            const input = document.createRange().createContextualFragment('<input type="checkbox" name="embedding-select">').firstChild
+            container.appendChild(input)
+            input.checked = false
+
+            input.addEventListener('change', event => {
+                event.preventDefault()
+                event.stopPropagation()
+                browser.fireEvent('dataValueMaterialCheckbox', [this.track])
+            })
+
+            this.materialProviderInput = input
+        }
+
         return axis
 
     }

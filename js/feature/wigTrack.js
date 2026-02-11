@@ -565,6 +565,10 @@ class WigTrack extends TrackBase {
         this.trackView = undefined
     }
 
+    static getDefaultColor() {
+        return 'rgb(150, 150, 150)'
+    }
+
 }
 
 /**

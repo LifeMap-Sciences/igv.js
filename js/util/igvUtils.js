@@ -211,6 +211,10 @@ function expandRegion(start, end, extent) {
     }
 }
 
+function lerp(a, b, x) {
+    return a * (1.0 - x) + b * x
+}
+
 function getElementVerticalDimension(element) {
 
     const style = window.getComputedStyle(element)
@@ -227,6 +231,7 @@ function getElementVerticalDimension(element) {
 }
 
 export {
+    lerp,
     createColumn,
     extend,
     isSimpleType,
