@@ -705,10 +705,10 @@ class TrackBase {
     getFilterableAttributes() {
         return {}
     }
+}
 
-    static getDefaultColor() {
-        return 'rgb(150,150,150)'
-    }
+TrackBase.getDefaultColor = function () {
+    return 'rgb(150,150,150)'
 }
 
 /**

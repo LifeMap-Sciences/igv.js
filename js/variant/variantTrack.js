@@ -1010,12 +1010,12 @@ function expandGenotype(call, variant) {
         }
         return gt
     }
-
-    static getDefaultColor() {
-        return 'rgb(0,0,150)'
-    }
 }
 
+
+VariantTrack.getDefaultColor = function () {
+    return 'rgb(0,0,150)'
+}
 
 const SV_COLOR_TABLE = new ColorTable({
     'DEL': '#ff2101',
