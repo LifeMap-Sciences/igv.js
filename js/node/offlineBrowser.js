@@ -265,6 +265,111 @@ class OfflineBrowser {
         console.error(`[preload] ${track.name || track.type}: ${totalFeatures} features across ${chrCount} chromosomes`)
     }
 
+    /**
+     * Pre-parse a track file and write per-chromosome JSON files to outputDir.
+     * This is the first phase of two-phase preloading: a single process parses
+     * the large files once, then workers load only the chromosomes they need.
+     *
+     * Output structure:
+     *   outputDir/{trackName}/header.json
+     *   outputDir/{trackName}/chr1.json
+     *   outputDir/{trackName}/chr2.json
+     *   ...
+     *
+     * @param {object} track - A loaded Track instance
+     * @param {string} filePath - Absolute path to the .gz file
+     * @param {string} outputDir - Directory to write per-chromosome files
+     */
+    async preloadTrackToDir(track, filePath, outputDir) {
+
+        const fs = await import('fs')
+        const zlib = await import('zlib')
+        const getDataWrapper = (await import('../feature/dataWrapper.js')).default
+        const FeatureParser = (await import('../feature/featureParser.js')).default
+
+        const compressed = fs.readFileSync(filePath)
+        const decompressed = zlib.gunzipSync(compressed)
+
+        const parser = new FeatureParser(track.config)
+
+        const headerWrapper = getDataWrapper(decompressed)
+        const header = await parser.parseHeader(headerWrapper)
+
+        const dataWrapper = getDataWrapper(decompressed)
+        const features = await parser.parseFeatures(dataWrapper)
+
+        // Build chromosome alias map
+        const chrAliasMap = new Map()
+        if (this.genome) {
+            const featureChrNames = new Set(features.map(f => f.chr))
+            for (const name of featureChrNames) {
+                const chromosome = await this.genome.loadChromosome(name)
+                if (chromosome) {
+                    chrAliasMap.set(name, chromosome.name)
+                }
+            }
+        }
+
+        // Group by canonical chromosome
+        const featuresByChromosome = new Map()
+        for (const f of features) {
+            const canonicalChr = chrAliasMap.get(f.chr) || f.chr
+            f.chr = canonicalChr
+            let list = featuresByChromosome.get(canonicalChr)
+            if (!list) {
+                list = []
+                featuresByChromosome.set(canonicalChr, list)
+            }
+            list.push(f)
+        }
+
+        // Write per-chromosome JSON files
+        const trackName = track.name || track.type
+        const trackDir = fs.mkdirSync(`${outputDir}/${trackName}`, {recursive: true}) ? `${outputDir}/${trackName}` : `${outputDir}/${trackName}`
+        fs.writeFileSync(`${outputDir}/${trackName}/header.json`, JSON.stringify(header || {}))
+
+        let totalFeatures = 0
+        for (const [chr, list] of featuresByChromosome) {
+            list.sort((a, b) => a.start - b.start)
+            fs.writeFileSync(`${outputDir}/${trackName}/${chr}.json`, JSON.stringify(list))
+            totalFeatures += list.length
+        }
+
+        console.error(`[preload] ${trackName}: ${totalFeatures} features across ${featuresByChromosome.size} chromosomes → ${outputDir}/${trackName}/`)
+    }
+
+    /**
+     * Load pre-parsed per-chromosome feature files into a track's feature source.
+     * This is the second phase: workers load only the chromosomes they need.
+     *
+     * @param {object} track - A loaded Track instance
+     * @param {string} preloadDir - Base directory containing per-track subdirectories
+     * @param {Set<string>} [chromosomes] - Optional set of chromosomes to load. If omitted, loads all.
+     */
+    async loadPreloadedTrackFromDir(track, preloadDir, chromosomes) {
+
+        const fs = await import('fs')
+        const trackName = track.name || track.type
+        const trackDir = `${preloadDir}/${trackName}`
+
+        const header = JSON.parse(fs.readFileSync(`${trackDir}/header.json`, 'utf8'))
+
+        const featuresByChromosome = new Map()
+        const files = fs.readdirSync(trackDir).filter(f => f !== 'header.json' && f.endsWith('.json'))
+
+        let totalFeatures = 0
+        for (const file of files) {
+            const chr = file.replace('.json', '')
+            if (chromosomes && !chromosomes.has(chr)) continue
+            const features = JSON.parse(fs.readFileSync(`${trackDir}/${file}`, 'utf8'))
+            featuresByChromosome.set(chr, features)
+            totalFeatures += features.length
+        }
+
+        track.featureSource = new PreloadedFeatureSource(featuresByChromosome, header)
+        console.error(`[preload] ${trackName}: loaded ${totalFeatures} features across ${featuresByChromosome.size} chromosomes from cache`)
+    }
+
     // ── Track management ───────────────────────────────────────────────
 
     /**
