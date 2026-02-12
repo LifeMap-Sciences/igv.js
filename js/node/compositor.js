@@ -3,31 +3,7 @@
  * image, optionally prepending a Y-axis strip on the left.
  */
 
-// Lazy-loaded modules (cached after first import)
-let _canvasModule = null
-let _fsModule = null
-let _pathModule = null
-
-async function getCanvasModule() {
-    if (!_canvasModule) {
-        _canvasModule = await import('canvas')
-    }
-    return _canvasModule
-}
-
-async function getFsModule() {
-    if (!_fsModule) {
-        _fsModule = await import('fs')
-    }
-    return _fsModule
-}
-
-async function getPathModule() {
-    if (!_pathModule) {
-        _pathModule = await import('path')
-    }
-    return _pathModule
-}
+import {getCanvasModule} from './environment.js'
 
 class Compositor {
 
@@ -67,8 +43,12 @@ class Compositor {
     }
 
     addTrack(trackCanvas, height, axisCanvas, label) {
+        // Gap is added between tracks (not before the first)
+        if (this.entries.length > 0) {
+            this.totalHeight += this.trackGap
+        }
         this.entries.push({trackCanvas, height, axisCanvas, label})
-        this.totalHeight += height + this.trackGap
+        this.totalHeight += height
     }
 
     /**
@@ -94,10 +74,11 @@ class Compositor {
             ctx.drawImage(this.navbarCanvas, 0, 0)
             y = this.navbarHeight
         }
-        for (const {trackCanvas, height, axisCanvas, label} of this.entries) {
+        for (let i = 0; i < this.entries.length; i++) {
+            const {trackCanvas, height, axisCanvas, label} = this.entries[i]
 
-            // Add gap before each track (matching igv.js CSS margin-top)
-            y += this.trackGap
+            // Add gap before each track except the first (matching igv.js CSS margin-top)
+            if (i > 0) y += this.trackGap
 
             if (axisCanvas) {
                 // Axis goes on the left, track to the right
@@ -163,8 +144,8 @@ class Compositor {
      * @returns {Promise<void>}
      */
     async toFile(filePath, format = 'jpeg', quality = 85) {
-        const fs = await getFsModule()
-        const path = await getPathModule()
+        const fs = await import('fs')
+        const path = await import('path')
 
         const dir = path.dirname(filePath)
         if (!fs.existsSync(dir)) {

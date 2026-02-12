@@ -4,14 +4,7 @@
  * DOM, event listeners, or UI components.
  */
 
-// Lazy-loaded canvas module (cached after first import)
-let _canvasModule = null
-async function getCanvasModule() {
-    if (!_canvasModule) {
-        _canvasModule = await import('canvas')
-    }
-    return _canvasModule
-}
+import {getCanvasModule} from './environment.js'
 
 class OfflineViewport {
 

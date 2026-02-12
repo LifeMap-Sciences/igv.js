@@ -11,10 +11,10 @@
 
 // Install shims FIRST — this must be the first import so it runs before
 // any igv.js code that accesses browser globals at module load time.
-import {installShims, uninstallShims} from './environment.js'
+import {installShims, uninstallShims, getCanvasModule} from './environment.js'
 installShims()
 
-export {installShims, uninstallShims}
+export {installShims, uninstallShims, getCanvasModule}
 export {default as OfflineBrowser} from './offlineBrowser.js'
 export {default as OfflineViewport} from './offlineViewport.js'
 export {default as Compositor} from './compositor.js'

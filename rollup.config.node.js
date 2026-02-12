@@ -2,8 +2,14 @@ import strip from '@rollup/plugin-strip';
 
 // Standalone rollup config for the Node.js headless rendering build.
 // Run with:  npm run build:node  (or)  npx rollup --config rollup.config.node.js
+//
+// The banner below provides synchronous shims that must be in place before any
+// bundled igv.js code executes (some modules access `document`, `window`, etc.
+// at module-load time).  Runtime shims that accept options (e.g. devicePixelRatio)
+// are handled by js/node/environment.js — see installShims().
 
 const nodeShimCode = `
+    // Minimal synchronous shims — must run before any igv.js module code.
     if (typeof globalThis.window === 'undefined') globalThis.window = globalThis;
     if (typeof globalThis.window.devicePixelRatio === 'undefined') globalThis.window.devicePixelRatio = 1;
     if (typeof globalThis.atob === 'undefined') globalThis.atob = function(s) { return Buffer.from(s, 'base64').toString('binary'); };
@@ -62,7 +68,7 @@ const nodeShimCode = `
 `;
 
 const esmBanner = `
-// --- Node.js environment shims ---
+// --- Node.js environment shims (synchronous, runs before module code) ---
 import { createRequire as __igvCreateRequire } from 'module';
 var __nodeRequire = __igvCreateRequire(import.meta.url);
 (function() {${nodeShimCode}})();
@@ -70,7 +76,7 @@ var __nodeRequire = __igvCreateRequire(import.meta.url);
 `;
 
 const cjsBanner = `
-// --- Node.js environment shims ---
+// --- Node.js environment shims (synchronous, runs before module code) ---
 var __nodeRequire = require;
 (function() {${nodeShimCode}})();
 // Rollup converts import.meta.url to a document.baseURI-based check in CJS;

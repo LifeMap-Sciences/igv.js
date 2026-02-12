@@ -7,7 +7,7 @@
  * reference `this.browser.*`.
  */
 
-import {installShims} from './environment.js'
+import {installShims, getCanvasModule} from './environment.js'
 import OfflineViewport from './offlineViewport.js'
 import Compositor from './compositor.js'
 
@@ -19,16 +19,6 @@ import * as TrackUtils from '../util/trackUtils.js'
 import {StringUtils, URIUtils} from '../../node_modules/igv-utils/src/index.js'
 import IdeogramTrack from '../ideogramTrack.js'
 import RulerTrack from '../rulerTrack.js'
-
-// Canvas module — cached after first lazy load (used by renderNavbar)
-let _canvasModule = null
-
-async function getCanvasModule() {
-    if (!_canvasModule) {
-        _canvasModule = await import('canvas')
-    }
-    return _canvasModule
-}
 
 // Track factory and feature source are loaded lazily to avoid the circular
 // dependency chain (featureSource→textFeatureSource→wigTrack→featureSource)
@@ -307,7 +297,6 @@ class OfflineBrowser {
      *
      * @param {string} locus   - Genomic locus, e.g. "chr14:104762747-104802361"
      * @param {number} width   - Output image width in pixels
-     * @param {number} height  - Fallback height (used when trackHeights are explicit)
      * @param {object} [options]
      * @param {number[]} [options.trackHeights] - Explicit per-track heights (overrides dynamic)
      * @param {boolean}  [options.axis]         - Include Y-axis strip (default false)
@@ -316,7 +305,7 @@ class OfflineBrowser {
      * @param {boolean}  [options.showNavbar]   - Draw igv.js navigation bar at top (default false)
      * @returns {Promise<object>} A node-canvas Canvas instance
      */
-    async renderLocus(locus, width, height, options = {}) {
+    async renderLocus(locus, width, options = {}) {
 
         const axisEnabled = options.axis || false
         const axisWidth = options.axisWidth || 50
@@ -404,19 +393,18 @@ class OfflineBrowser {
      *
      * @param {string} locus      - Genomic locus
      * @param {number} width      - Output width in pixels
-     * @param {number} height     - Output height in pixels
      * @param {string} outputPath - File path for the output image
      * @param {object} [options]
      * @param {string} [options.format]  - 'jpeg' or 'png' (default 'jpeg')
      * @param {number} [options.quality] - JPEG quality 0-100 (default 85)
      * @returns {Promise<void>}
      */
-    async renderToFile(locus, width, height, outputPath, options = {}) {
+    async renderToFile(locus, width, outputPath, options = {}) {
 
         const format = options.format || 'jpeg'
         const quality = options.quality ?? 85
 
-        const canvas = await this.renderLocus(locus, width, height, options)
+        const canvas = await this.renderLocus(locus, width, options)
 
         const fs = await import('fs')
         const path = await import('path')

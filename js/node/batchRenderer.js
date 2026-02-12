@@ -170,6 +170,7 @@ class BatchRenderer {
 
             const sendNext = () => {
                 if (queue.length === 0) {
+                    worker.removeListener('message', messageHandler)
                     resolve()
                     return
                 }

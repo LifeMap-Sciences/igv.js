@@ -57,7 +57,6 @@ parentPort.on('message', async (msg) => {
                 await browser.renderToFile(
                     job.locus,
                     job.width,
-                    job.height,
                     job.outputPath,
                     options
                 )

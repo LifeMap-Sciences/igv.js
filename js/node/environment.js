@@ -11,6 +11,17 @@
 
 let installed = false
 
+// Lazy-loaded canvas module — shared singleton across all node/ modules.
+// Use getCanvasModule() instead of importing 'canvas' directly.
+let _canvasModule = null
+
+async function getCanvasModule() {
+    if (!_canvasModule) {
+        _canvasModule = await import('canvas')
+    }
+    return _canvasModule
+}
+
 function installShims(options = {}) {
 
     if (installed) return
@@ -32,51 +43,11 @@ function installShims(options = {}) {
         globalThis.document = createDocumentShim()
     }
 
-    // ── DOMParser shim (for SVG/XML parsing in some tracks) ─────────────
-    if (typeof globalThis.DOMParser === 'undefined') {
-        try {
-            const { DOMParser } = require('@xmldom/xmldom')
-            globalThis.DOMParser = DOMParser
-        } catch (e) {
-            // Optional dependency — only needed if tracks parse XML
-        }
-    }
-
-    // ── HTMLCanvasElement shim (for instanceof checks) ──────────────────
-    if (typeof globalThis.HTMLCanvasElement === 'undefined') {
-        try {
-            const { Canvas } = require('canvas')
-            globalThis.HTMLCanvasElement = Canvas
-        } catch (e) {
-            // Provide a dummy so `instanceof` checks don't throw
-            globalThis.HTMLCanvasElement = class HTMLCanvasElement {}
-        }
-    }
-
-    // ── Performance / timing (used by some logging paths) ───────────────
-    if (typeof globalThis.performance === 'undefined') {
-        const { performance } = require('perf_hooks')
-        globalThis.performance = performance
-    }
-
-    // ── XMLHttpRequest (used by igv-utils for HTTP requests) ────────────
-    if (typeof globalThis.XMLHttpRequest === 'undefined') {
-        try {
-            const { XMLHttpRequest } = require('w3c-xmlhttprequest')
-            globalThis.XMLHttpRequest = XMLHttpRequest
-        } catch (e) {
-            // w3c-xmlhttprequest not installed — HTTP requests will fail
-            // unless native fetch is available
-        }
-    }
-
-    // ── atob / btoa (base64, used by some data loading paths) ───────────
-    if (typeof globalThis.atob === 'undefined') {
-        globalThis.atob = (str) => Buffer.from(str, 'base64').toString('binary')
-    }
-    if (typeof globalThis.btoa === 'undefined') {
-        globalThis.btoa = (str) => Buffer.from(str, 'binary').toString('base64')
-    }
+    // Note: DOMParser, HTMLCanvasElement, performance, XMLHttpRequest,
+    // atob, and btoa shims are installed by the rollup bundle banner
+    // (which runs synchronously at load time before any module code).
+    // This function only needs to handle shims that depend on runtime
+    // options (like devicePixelRatio) or that the banner doesn't cover.
 }
 
 // ── Minimal document shim ───────────────────────────────────────────────
@@ -175,5 +146,5 @@ function uninstallShims() {
     installed = false
 }
 
-export { installShims, uninstallShims }
+export { installShims, uninstallShims, getCanvasModule }
 export default installShims
