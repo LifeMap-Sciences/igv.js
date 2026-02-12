@@ -417,7 +417,7 @@ class OfflineBrowser {
 
         let buffer
         if (format === 'jpeg' || format === 'jpg') {
-            buffer = canvas.toBuffer('image/jpeg', {quality: quality / 100})
+            buffer = canvas.toBuffer('image/jpeg', quality)
         } else {
             buffer = canvas.toBuffer('image/png')
         }

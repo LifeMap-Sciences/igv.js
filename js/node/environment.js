@@ -17,7 +17,7 @@ let _canvasModule = null
 
 async function getCanvasModule() {
     if (!_canvasModule) {
-        _canvasModule = await import('canvas')
+        _canvasModule = await import('@napi-rs/canvas')
     }
     return _canvasModule
 }
@@ -106,7 +106,7 @@ function createDocumentShim() {
         createElement(tag) {
             if (tag.toLowerCase() === 'canvas') {
                 try {
-                    const { createCanvas } = require('canvas')
+                    const { createCanvas } = require('@napi-rs/canvas')
                     return createCanvas(1, 1)
                 } catch (e) {
                     return createElementStub(tag)

@@ -44,7 +44,7 @@ const nodeShimCode = `
         globalThis.document = {
             createElement: function(tag) {
                 if (tag.toLowerCase() === 'canvas') {
-                    try { return __nodeRequire('canvas').createCanvas(1,1); } catch(e) { return stub(tag); }
+                    try { return __nodeRequire('@napi-rs/canvas').createCanvas(1,1); } catch(e) { return stub(tag); }
                 }
                 return stub(tag);
             },
@@ -61,10 +61,21 @@ const nodeShimCode = `
         try { globalThis.DOMParser = __nodeRequire('@xmldom/xmldom').DOMParser; } catch(e) {}
     }
     if (typeof globalThis.HTMLCanvasElement === 'undefined') {
-        try { globalThis.HTMLCanvasElement = __nodeRequire('canvas').Canvas; } catch(e) {
+        try { globalThis.HTMLCanvasElement = __nodeRequire('@napi-rs/canvas').Canvas; } catch(e) {
             globalThis.HTMLCanvasElement = function HTMLCanvasElement(){};
         }
     }
+    // Register Arial (or Liberation Sans on Linux) as the "sans-serif" font.
+    // Skia does not map CSS generic families to system fonts the way browsers do.
+    try {
+        var __gf = __nodeRequire('@napi-rs/canvas').GlobalFonts;
+        if (typeof process !== 'undefined' && process.platform === 'win32') {
+            try { __gf.registerFromPath('C:/Windows/Fonts/arial.ttf', 'sans-serif'); } catch(e) {}
+        } else {
+            try { __gf.registerFromPath('/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf', 'sans-serif'); } catch(e) {}
+            try { __gf.registerFromPath('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 'sans-serif'); } catch(e) {}
+        }
+    } catch(e) {}
 `;
 
 const esmBanner = `
@@ -88,7 +99,7 @@ if (typeof globalThis.document !== 'undefined' && !globalThis.document.baseURI) 
 `;
 
 const external = [
-    'canvas',
+    '@napi-rs/canvas',
     'worker_threads',
     'module',
     'fs',

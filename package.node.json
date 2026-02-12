@@ -1,0 +1,10 @@
+{
+  "name": "igv-node",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@xmldom/xmldom": "^0.8.11",
+    "@napi-rs/canvas": "^0.1.91",
+    "w3c-xmlhttprequest": "^3.0.4"
+  }
+}

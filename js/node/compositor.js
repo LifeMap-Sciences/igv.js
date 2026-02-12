@@ -59,7 +59,7 @@ class Compositor {
     async compose() {
 
         const {createCanvas} = await getCanvasModule()
-        const navHeight = this.navbarCanvas ? this.navbarHeight : 0
+        const navHeight = this.navbarCanvas ? this.navbarHeight + this.trackGap : 0
         const canvas = createCanvas(this.width, navHeight + this.totalHeight)
         const ctx = canvas.getContext('2d')
 
@@ -72,7 +72,7 @@ class Compositor {
         // Draw navbar if present
         if (this.navbarCanvas) {
             ctx.drawImage(this.navbarCanvas, 0, 0)
-            y = this.navbarHeight
+            y = this.navbarHeight + this.trackGap
         }
         for (let i = 0; i < this.entries.length; i++) {
             const {trackCanvas, height, axisCanvas, label} = this.entries[i]
@@ -130,7 +130,7 @@ class Compositor {
     async toBuffer(format = 'jpeg', quality = 85) {
         const canvas = await this.compose()
         if (format === 'jpeg' || format === 'jpg') {
-            return canvas.toBuffer('image/jpeg', {quality: quality / 100})
+            return canvas.toBuffer('image/jpeg', quality)
         }
         return canvas.toBuffer('image/png')
     }

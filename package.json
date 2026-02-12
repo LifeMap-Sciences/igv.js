@@ -55,22 +55,22 @@
     "url": "git+https://github.com/igvteam/igv.js.git"
   },
   "peerDependencies": {
-    "canvas": "^2.11.0 || ^3.0.0"
+    "@napi-rs/canvas": "^0.1.91"
   },
   "peerDependenciesMeta": {
-    "canvas": {
+    "@napi-rs/canvas": {
       "optional": true
     }
   },
   "browserslist": "> 1%, not dead",
   "devDependencies": {
     "@gmod/cram": "^5.0.5",
+    "@napi-rs/canvas": "^0.1.91",
     "@rollup/plugin-strip": "^3.0.1",
     "@rollup/plugin-terser": "^0.4.0",
     "@xmldom/xmldom": "^0.7.9",
     "atob": "^2.1.2",
     "btoa": "^1.2.1",
-    "canvas": "^3.2.1",
     "chai": "^4.3.7",
     "circular-view": "github:igvteam/circular-view#v0.2.4",
     "dompurify": "^3.0.9",
