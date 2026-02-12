@@ -30,4 +30,7 @@ export default [
             }),
         ]
     }
+
+    // Node.js headless rendering build is in rollup.config.node.js
+    // Build with: npm run build:node
 ];

@@ -6,14 +6,26 @@
   "module": "dist/igv.esm.js",
   "types": "dist/igv.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/igv.esm.js",
+      "default": "./dist/igv.esm.js"
+    },
+    "./node": {
+      "import": "./dist/igv-node.esm.js",
+      "require": "./dist/igv-node.cjs"
+    }
+  },
   "description": "Embeddable genomic visualization component based on the Integrative Genomics Viewer",
   "files": [
-    "dist/**"
+    "dist/**",
+    "js/node/**"
   ],
   "scripts": {
     "prepack": "npm run build",
     "prepare": "npm run build",
     "build": "node scripts/updateVersion.cjs && node scripts/compileSass.cjs && node scripts/generateEmbedCss.js && npx rollup --config && node scripts/copyArtifacts.cjs",
+    "build:node": "npx rollup --config rollup.config.node.js",
     "build_iife": "node scripts/updateVersion.cjs && node scripts/compileSass.cjs && node scripts/generateEmbedCss.js && npx rollup --config rollup.config.iife.js && node scripts/copyArtifacts.cjs",
     "updateCSS": "node scripts/compileSass.cjs && node scripts/generateEmbedCss.js",
     "test": "mocha -ui tdd"
@@ -42,6 +54,14 @@
     "type": "git",
     "url": "git+https://github.com/igvteam/igv.js.git"
   },
+  "peerDependencies": {
+    "canvas": "^2.11.0 || ^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "canvas": {
+      "optional": true
+    }
+  },
   "browserslist": "> 1%, not dead",
   "devDependencies": {
     "@gmod/cram": "^5.0.5",
@@ -50,6 +70,7 @@
     "@xmldom/xmldom": "^0.7.9",
     "atob": "^2.1.2",
     "btoa": "^1.2.1",
+    "canvas": "^3.2.1",
     "chai": "^4.3.7",
     "circular-view": "github:igvteam/circular-view#v0.2.4",
     "dompurify": "^3.0.9",
