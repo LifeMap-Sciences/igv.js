@@ -3,7 +3,10 @@ function getDataWrapper(data) {
     if (typeof (data) == 'string' || data instanceof String) {
         return new StringDataWrapper(data)
     } else {
-        return new ByteArrayDataWrapper(data)
+        // Use native TextDecoder for fast bulk conversion instead of the
+        // byte-by-byte UTF-8 decoding in ByteArrayDataWrapper
+        const decoded = new TextDecoder().decode(data)
+        return new StringDataWrapper(decoded)
     }
 }
 

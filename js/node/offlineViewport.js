@@ -55,13 +55,16 @@ class OfflineViewport {
      * Render the track onto a new node-canvas and return the canvas.
      *
      * @param {object} [features] - Pre-loaded features (if omitted uses this.cachedFeatures)
+     * @param {object} [profiler] - Optional RenderProfiler for sub-phase timing
      * @returns {Promise<object>} A node-canvas Canvas instance
      */
-    async render(features) {
+    async render(features, profiler) {
 
+        const endCreateCanvas = profiler?.time('createCanvas')
         const {createCanvas} = await getCanvasModule()
         const canvas = createCanvas(this.width, this.height)
         const ctx = canvas.getContext('2d')
+        endCreateCanvas?.()
 
         features = features || this.cachedFeatures
 
@@ -83,11 +86,13 @@ class OfflineViewport {
         }
 
         if (features) {
+            const endDraw = profiler?.time('draw')
             try {
                 this.track.draw(drawConfiguration)
             } catch (e) {
                 console.error(`[OfflineViewport] Error drawing track "${this.track.type || this.track.name}":`, e.message)
             }
+            endDraw?.()
         }
 
         return canvas

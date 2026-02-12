@@ -21,6 +21,7 @@ class BGZBlockLoader {
         this.config = config
         this.cacheBlocks = false != config.cacheBlocks   // Default to true
         this.cache = undefined
+        this.inflatedBlockCache = new Map()  // filePosition -> inflated Uint8Array
     }
 
     /**
@@ -63,9 +64,11 @@ class BGZBlockLoader {
      */
     async getInflatedBlocks(startBlock, endBlock, skipEnd) {
 
+        const ibc = this.inflatedBlockCache
+
         if (!this.cacheBlocks) {
             const buffer = await this.loadBLockData(startBlock, endBlock, {skipEnd})
-            return inflateBlocks(buffer)
+            return inflateBlocks(buffer, undefined, undefined, ibc, startBlock)
         } else {
 
             const c = this.cache
@@ -75,7 +78,7 @@ class BGZBlockLoader {
                 //console.log("Complete overlap")
                 const startOffset = startBlock - c.startBlock
                 const endOffset = endBlock - c.startBlock
-                return inflateBlocks(c.buffer, startOffset, endOffset)
+                return inflateBlocks(c.buffer, startOffset, endOffset, ibc, c.startBlock)
                 // Don't update cache, still valid
             } else {
 
@@ -136,7 +139,7 @@ class BGZBlockLoader {
                 }
 
                 this.cache = {startBlock, endBlock, nextEndBlock, buffer}
-                return inflateBlocks(buffer)
+                return inflateBlocks(buffer, undefined, undefined, ibc, startBlock)
             }
         }
     }
@@ -169,8 +172,6 @@ class BGZBlockLoader {
             }
         })
 
-        //console.log(`${this.config.name}  Loaded ${startBlock} - ${endBlock + lastBlockSize}   (${(endBlock + lastBlockSize - startBlock) / 1000} kb)`)
-
         return igvxhr.loadArrayBuffer(config.url, loadOptions)
     }
 }
@@ -196,11 +197,13 @@ function findBlockBoundaries(arrayBuffer) {
 /**
  * Inflate compressed blocks within the data buffer*
  * @param data
- * @param startBlock - optional file location for start block.  Default == 0
- * @param endBlock - optional file location for last block to decompress.
+ * @param startBlock - optional byte offset for start block within data.  Default == 0
+ * @param endBlock - optional byte offset for last block to decompress within data.
+ * @param inflatedCache - optional Map<filePosition, Uint8Array> for caching decompressed blocks
+ * @param baseFilePosition - file position corresponding to byte 0 in data (used as cache key base)
  * @returns {*[]}
  */
-function inflateBlocks(data, startBlock, endBlock) {
+function inflateBlocks(data, startBlock, endBlock, inflatedCache, baseFilePosition) {
 
     startBlock = startBlock || 0
 
@@ -210,22 +213,44 @@ function inflateBlocks(data, startBlock, endBlock) {
     const lim = data.byteLength - 18
     while (ptr < lim) {
         try {
-            //console.log(113873 + ptr)
             const header = new Uint8Array(data, ptr, 18)
-            const xlen = (header[11] << 8) | (header[10])
-            const bsize = ((header[17] << 8) | (header[16]))  // Total block size, including header, minus 1
-            const start = 12 + xlen + ptr    // Start of CDATA
-            const bytesLeft = data.byteLength - start
-            const cDataSize = bsize - xlen - 18
 
-            if (bytesLeft < cDataSize || cDataSize <= 0) {
-                // This is unexpected.  Throw error?
-                break
+            // Validate BGZF header (gzip magic + deflate + FEXTRA flag)
+            if (header[0] !== 0x1f || header[1] !== 0x8b || header[2] !== 0x08 || (header[3] & FEXTRA) === 0) {
+                break  // Not a valid BGZF block (e.g. over-fetched past end of data)
             }
 
-            const cdata = new Uint8Array(data, start, cDataSize)
-            const unc = BGZip.inflateRaw(cdata)
-            oBlockList.push(unc)
+            const bsize = ((header[17] << 8) | (header[16]))  // Total block size, including header, minus 1
+
+            // Check inflated block cache
+            const filePos = baseFilePosition !== undefined ? baseFilePosition + ptr : undefined
+            if (inflatedCache && filePos !== undefined && inflatedCache.has(filePos)) {
+                oBlockList.push(inflatedCache.get(filePos))
+            } else {
+                const xlen = (header[11] << 8) | (header[10])
+                const start = 12 + xlen + ptr    // Start of CDATA
+                const bytesLeft = data.byteLength - start
+                const cDataSize = bsize - xlen - 18
+
+                if (bytesLeft < cDataSize || cDataSize <= 0) {
+                    break
+                }
+
+                const cdata = new Uint8Array(data, start, cDataSize)
+                const inflate = globalThis.__igv_native_inflate_raw || BGZip.inflateRaw
+                const unc = inflate(cdata)
+
+                // Cache the inflated block
+                if (inflatedCache && filePos !== undefined) {
+                    inflatedCache.set(filePos, unc)
+                    // Prevent unbounded growth — clear cache if it gets too large
+                    if (inflatedCache.size > 500) {
+                        inflatedCache.clear()
+                    }
+                }
+
+                oBlockList.push(unc)
+            }
 
             if (endBlock === ptr) {
                 break

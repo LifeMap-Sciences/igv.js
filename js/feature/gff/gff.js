@@ -40,20 +40,53 @@ function decodeGFF3(tokens, header) {
         return
     }
 
-    const attributes =  parseAttributeString(feature.attributeString, feature.delim)
+    const attrStr = feature.attributeString
 
-    // Search for color value as case insenstivie key
-    for (let [key, value] of attributes) {
-        const keyLower = key.toLowerCase()
-        if ("color" === keyLower || "colour" === keyLower) {
-            feature.color = IGVColor.createColorString(value)
-        } else if (key === "ID") {
-            feature.id = value
-        } else if (key === "Parent") {
-            feature.parent = value
+    // Fast targeted extraction of ID and Parent without parsing all attributes.
+    // This avoids splitting the entire attribute string, creating intermediate
+    // substrings, and calling decodeGFFAttribute on every key-value pair.
+    feature.id = findGFF3Value(attrStr, 'ID=', 3)
+    feature.parent = findGFF3Value(attrStr, 'Parent=', 7)
+
+    // Color attributes are rare — only fall back to full parse if 'olor' appears
+    if (attrStr.indexOf('olor') >= 0) {
+        const attributes = parseAttributeString(attrStr, feature.delim)
+        for (let [key, value] of attributes) {
+            const keyLower = key.toLowerCase()
+            if ("color" === keyLower || "colour" === keyLower) {
+                feature.color = IGVColor.createColorString(value)
+                break
+            }
         }
     }
+
     return feature
+}
+
+/**
+ * Fast extraction of a GFF3 attribute value by key, using indexOf instead of
+ * splitting and iterating all attributes.
+ *
+ * @param {string} attrStr - The raw GFF3 column 9 attribute string
+ * @param {string} keyEq   - The key including '=' suffix, e.g. 'ID=' or 'Parent='
+ * @param {number} keyEqLen - Length of keyEq (avoids .length property access)
+ * @returns {string|undefined}
+ */
+function findGFF3Value(attrStr, keyEq, keyEqLen) {
+    let idx = 0
+    while (true) {
+        idx = attrStr.indexOf(keyEq, idx)
+        if (idx < 0) return undefined
+        // Must be at start of string, or preceded by ';', space, or tab
+        const prev = idx > 0 ? attrStr.charCodeAt(idx - 1) : 0
+        if (idx === 0 || prev === 59 /* ; */ || prev === 32 /* space */ || prev === 9 /* tab */) {
+            const start = idx + keyEqLen
+            const end = attrStr.indexOf(';', start)
+            const raw = end >= 0 ? attrStr.substring(start, end) : attrStr.substring(start)
+            return raw.indexOf('%') >= 0 ? decodeGFFAttribute(raw) : raw
+        }
+        idx += keyEqLen
+    }
 }
 
 /**

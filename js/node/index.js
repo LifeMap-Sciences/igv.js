@@ -19,6 +19,7 @@ export {default as OfflineBrowser} from './offlineBrowser.js'
 export {default as OfflineViewport} from './offlineViewport.js'
 export {default as Compositor} from './compositor.js'
 export {default as BatchRenderer} from './batchRenderer.js'
+export {default as RenderProfiler} from './profiler.js'
 
 // Re-export TrackBase (no circular dependency issues)
 export {default as TrackBase} from '../trackBase.js'

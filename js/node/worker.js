@@ -20,6 +20,7 @@
 import {parentPort, workerData} from 'worker_threads'
 
 let browser = null
+let profiler = null
 
 parentPort.on('message', async (msg) => {
 
@@ -31,6 +32,14 @@ parentPort.on('message', async (msg) => {
                 const {default: OfflineBrowser} = await import('./offlineBrowser.js')
                 browser = new OfflineBrowser(msg.config)
                 await browser.init()
+
+                // Enable profiling if requested
+                if (msg.config.profiling) {
+                    const {default: RenderProfiler} = await import('./profiler.js')
+                    profiler = new RenderProfiler()
+                    browser.profiler = profiler
+                }
+
                 parentPort.postMessage({type: 'ready'})
             } catch (e) {
                 parentPort.postMessage({type: 'error', job: null, message: e.message || String(e)})
@@ -69,6 +78,12 @@ parentPort.on('message', async (msg) => {
                     message: e.message || String(e)
                 })
             }
+            break
+        }
+
+        case 'getProfile': {
+            const data = profiler ? profiler.serialize() : null
+            parentPort.postMessage({type: 'profile', data})
             break
         }
 

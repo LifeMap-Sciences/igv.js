@@ -56,26 +56,19 @@ class GFFFeature {
     getAttributeValue(attributeName) {
         if (this.hasOwnProperty(attributeName)) {
             return this[attributeName]
-        } else {
-            // TODO -- fetch from attribute string and cache
-            if (!this._attributeCache) {
-                this._attributeCache = new Map()
-            }
-            if (this._attributeCache.has(attributeName)) {
-                return this._attributeCache.get(attributeName)
-            } else {
+        }
+        // Parse and cache ALL attributes on first access so subsequent
+        // lookups are O(1) Map gets instead of re-parsing the string.
+        if (!this._attributeCache) {
+            this._attributeCache = new Map()
+            if (this.attributeString) {
                 const atts = parseAttributeString(this.attributeString, this.delim)
-                let v
                 for (let [key, value] of atts) {
-                    if (key === attributeName) {
-                        v = value
-                        break
-                    }
+                    this._attributeCache.set(key, value)
                 }
-                this._attributeCache.set(attributeName, v)
-                return v
             }
         }
+        return this._attributeCache.get(attributeName)
     }
 }
 

@@ -22,6 +22,7 @@ import {Worker} from 'worker_threads'
 import {fileURLToPath} from 'url'
 import path from 'path'
 import {installShims} from './environment.js'
+import RenderProfiler from './profiler.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -49,6 +50,9 @@ class BatchRenderer {
         this.concurrency = config.concurrency || 4
         this._workers = []
         this._initialized = false
+
+        /** @type {RenderProfiler|null} Aggregated profiler (populated after collectProfile()) */
+        this.profiler = config.profiling ? new RenderProfiler() : null
     }
 
     /**
@@ -68,6 +72,7 @@ class BatchRenderer {
             minimumBases: this.config.minimumBases,
             trackDefaults: this.config.trackDefaults,
             loadDefaultGenomes: this.config.loadDefaultGenomes ?? true,
+            profiling: !!this.config.profiling,
         }
 
         const initPromises = []
@@ -206,6 +211,38 @@ class BatchRenderer {
             // Kick off the first job
             sendNext()
         })
+    }
+
+    /**
+     * Collect profiling data from all worker threads and merge into this.profiler.
+     * Call after renderBatch() completes and before dispose().
+     *
+     * @returns {Promise<RenderProfiler|null>} The merged profiler, or null if profiling is disabled
+     */
+    async collectProfile() {
+        if (!this.profiler) return null
+
+        const profilePromises = this._workers.map((worker) => {
+            return new Promise((resolve) => {
+                const handler = (msg) => {
+                    if (msg.type === 'profile') {
+                        worker.removeListener('message', handler)
+                        resolve(msg.data)
+                    }
+                }
+                worker.on('message', handler)
+                worker.postMessage({type: 'getProfile'})
+            })
+        })
+
+        const profiles = await Promise.all(profilePromises)
+        for (const data of profiles) {
+            if (data) {
+                this.profiler.merge(data)
+            }
+        }
+
+        return this.profiler
     }
 
     /**

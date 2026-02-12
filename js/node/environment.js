@@ -146,5 +146,22 @@ function uninstallShims() {
     installed = false
 }
 
-export { installShims, uninstallShims, getCanvasModule }
+/**
+ * Initialize native Node.js zlib for BGZF decompression.
+ * This replaces pako (pure JS) with the native C implementation,
+ * giving ~5-10x faster decompression.
+ *
+ * Call once before any data loading. Idempotent.
+ */
+async function initNativeZlib() {
+    if (globalThis.__igv_native_inflate_raw) return
+    try {
+        const zlib = await import('node:zlib')
+        globalThis.__igv_native_inflate_raw = (data) => zlib.inflateRawSync(data)
+    } catch (e) {
+        // Not in Node.js or zlib not available — fall back to pako
+    }
+}
+
+export { installShims, uninstallShims, getCanvasModule, initNativeZlib }
 export default installShims

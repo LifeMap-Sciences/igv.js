@@ -202,7 +202,8 @@ class TextFeatureSource extends BaseFeatureSource {
             intervalStart = 0
             intervalEnd = Math.max(chromosome ? chromosome.bpLength : Number.MAX_SAFE_INTEGER, end)
         } else if (visibilityWindow > (end - start) && this.config.expandQuery !== false) {
-            let expansionWindow = Math.min(4.1 * (end - start), visibilityWindow)
+            const expandFactor = this.config.expandQueryFactor || 4.1
+            let expansionWindow = Math.min(expandFactor * (end - start), visibilityWindow)
             if(this.config.minQuerySize && expansionWindow < this.config.minQuerySize) {
                 expansionWindow = this.config.minQuerySize
             }

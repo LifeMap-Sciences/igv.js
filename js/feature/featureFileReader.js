@@ -99,7 +99,7 @@ class FeatureFileReader {
             if (a.chr === b.chr) {
                 return a.start - b.start
             } else {
-                return a.chr.localeCompare(b.chr)
+                return a.chr < b.chr ? -1 : 1
             }
         })
 
@@ -312,7 +312,7 @@ class FeatureFileReader {
             if (a.chr === b.chr) {
                 return a.start - b.start
             } else {
-                return a.chr.localeCompare(b.chr)
+                return a.chr < b.chr ? -1 : 1
             }
         })
 
