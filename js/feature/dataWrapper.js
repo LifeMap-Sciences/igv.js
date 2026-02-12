@@ -2,6 +2,9 @@ function getDataWrapper(data) {
 
     if (typeof (data) == 'string' || data instanceof String) {
         return new StringDataWrapper(data)
+    } else if (data.length > 0x1fffffe0) {
+        // Buffer exceeds V8's max string length — decode line-by-line
+        return new BufferLineWrapper(data)
     } else {
         // Use native TextDecoder for fast bulk conversion instead of the
         // byte-by-byte UTF-8 decoding in ByteArrayDataWrapper
@@ -113,6 +116,38 @@ class ByteArrayDataWrapper {
     }
 
 
+}
+
+/**
+ * Line-by-line wrapper for large buffers that exceed V8's max string length.
+ * Scans for newline bytes and decodes each line individually.
+ */
+class BufferLineWrapper {
+
+    constructor(buffer) {
+        this.data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
+        this.ptr = 0
+        this.decoder = new TextDecoder()
+    }
+
+    nextLine() {
+        if (this.ptr >= this.data.length) {
+            return undefined
+        }
+        const start = this.ptr
+        let end = this.data.indexOf(0x0A, start)  // Find newline byte
+        if (end === -1) {
+            end = this.data.length
+            this.ptr = end
+        } else {
+            this.ptr = end + 1
+        }
+        // Trim trailing CR if present
+        if (end > start && this.data[end - 1] === 0x0D) {
+            end--
+        }
+        return this.decoder.decode(this.data.subarray(start, end))
+    }
 }
 
 export default getDataWrapper

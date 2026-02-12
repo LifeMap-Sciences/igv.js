@@ -211,20 +211,20 @@ class OfflineBrowser {
         const getDataWrapper = (await import('../feature/dataWrapper.js')).default
         const FeatureParser = (await import('../feature/featureParser.js')).default
 
-        // Read and decompress the entire file
+        // Read and decompress the entire file into a Buffer (not a string,
+        // which would fail for files >512MB due to V8's string length limit)
         const compressed = fs.readFileSync(filePath)
         const decompressed = zlib.gunzipSync(compressed)
-        const text = new TextDecoder().decode(decompressed)
 
         // Create parser matching the track's format
         const parser = new FeatureParser(track.config)
 
         // Parse header (consumes directive/comment lines)
-        const headerWrapper = getDataWrapper(text)
+        const headerWrapper = getDataWrapper(decompressed)
         const header = await parser.parseHeader(headerWrapper)
 
-        // Parse all features (re-wraps same text — parseFeatures skips header lines)
-        const dataWrapper = getDataWrapper(text)
+        // Parse all features (re-wraps same buffer — parseFeatures skips header lines)
+        const dataWrapper = getDataWrapper(decompressed)
         const features = await parser.parseFeatures(dataWrapper)
 
         // Build chromosome alias map: feature chr name → canonical genome name
